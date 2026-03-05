@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Gmail Grouper - UI Demo</title>
   <style>
-    /* =========================================
-       1. 模拟 Gmail 背景界面的样式 (Mock Gmail UI)
-       ========================================= */
     body, html {
       margin: 0;
       padding: 0;
@@ -75,9 +72,6 @@
     .mock-snippet { color: #5f6368; font-weight: normal; }
     .mock-date { width: 80px; text-align: right; color: #5f6368; font-size: 12px; }
 
-    /* =========================================
-       2. 扩展注入的 UI 样式 (Extension UI CSS)
-       ========================================= */
     #sg-toggle-btn {
       position: fixed;
       bottom: 24px;
@@ -162,14 +156,14 @@
     .sg-actions button.primary { background: #1a73e8; color: white; border: none;}
     .sg-actions button.primary:hover { background: #1557b0; }
     
-    /* 占位空状态 */
+    /* none */
     .sg-empty { text-align: center; padding: 40px 20px; color: #5f6368; }
     .sg-empty svg { width: 64px; height: 64px; margin-bottom: 16px; fill: #dadce0;}
   </style>
 </head>
 <body>
 
-  <!-- 模拟的 Gmail 背景 -->
+ 
   <div class="mock-gmail-header">
     <div class="logo">≡ &nbsp; <span style="color:#ea4335">M</span>ail Demo</div>
   </div>
@@ -184,7 +178,7 @@
       <div style="padding: 16px; border-bottom: 1px solid #e0e0e0; display:flex; gap:16px; color:#5f6368">
         <span>↻</span> <span>⋮</span>
       </div>
-      <!-- 模拟邮件列表 -->
+
       <div class="mock-email-row"><div class="mock-sender">Netflix</div><div class="mock-subject">New sign-in to your account <span class="mock-snippet">- We noticed a new sign-in...</span></div><div class="mock-date">10:42 AM</div></div>
       <div class="mock-email-row"><div class="mock-sender">Best Buy</div><div class="mock-subject">Flash Sale: 50% Off Laptops <span class="mock-snippet">- Don't miss out on these deals...</span></div><div class="mock-date">Yesterday</div></div>
       <div class="mock-email-row"><div class="mock-sender">GitHub</div><div class="mock-subject">[Smart-Grouper] Pull request #1 opened <span class="mock-snippet">- Please review the new UI changes...</span></div><div class="mock-date">Mar 2</div></div>
@@ -193,7 +187,7 @@
     </div>
   </div>
 
-  <!-- 扩展注入的 UI 元素 -->
+ 
   <button id="sg-toggle-btn">⚡ Group Inbox</button>
 
   <div id="smart-grouper-sidebar">
@@ -219,7 +213,7 @@
   </div>
 
   <script>
-    // 模拟数据 (Mock API Response)
+ 
     const mockData = [
       {
         id: 'group1',
