@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Gmail Grouper - UI Demo</title>
+  <style>
+    /* =========================================
+       1. 模拟 Gmail 背景界面的样式 (Mock Gmail UI)
+       ========================================= */
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Roboto', Arial, sans-serif;
+      background-color: #f6f8fc;
+      overflow: hidden;
+    }
+    .mock-gmail-header {
+      height: 64px;
+      background: white;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .mock-gmail-header .logo {
+      font-size: 22px;
+      color: #5f6368;
+      font-weight: 500;
+    }
+    .mock-gmail-layout {
+      display: flex;
+      height: calc(100vh - 64px);
+    }
+    .mock-gmail-sidebar {
+      width: 256px;
+      padding: 16px;
+    }
+    .mock-gmail-sidebar-item {
+      padding: 10px 24px;
+      margin-bottom: 4px;
+      border-radius: 0 16px 16px 0;
+      color: #202124;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .mock-gmail-sidebar-item.active {
+      background: #fce8e6;
+      color: #d93025;
+    }
+    .mock-gmail-content {
+      flex: 1;
+      background: white;
+      border-radius: 16px;
+      margin: 16px 16px 16px 0;
+      box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .mock-email-row {
+      display: flex;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f3f4;
+      align-items: center;
+      cursor: pointer;
+    }
+    .mock-email-row:hover {
+      box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+      z-index: 1;
+    }
+    .mock-sender { width: 200px; font-weight: bold; color: #202124; }
+    .mock-subject { flex: 1; color: #202124; }
+    .mock-snippet { color: #5f6368; font-weight: normal; }
+    .mock-date { width: 80px; text-align: right; color: #5f6368; font-size: 12px; }
+
+    /* =========================================
+       2. 扩展注入的 UI 样式 (Extension UI CSS)
+       ========================================= */
+    #sg-toggle-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1a73e8;
+      color: white;
+      padding: 14px 24px;
+      border-radius: 24px;
+      cursor: pointer;
+      z-index: 999999;
+      font-family: Roboto, sans-serif;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+      border: none;
+      font-size: 15px;
+    }
+    #sg-toggle-btn:hover { background: #1557b0; box-shadow: 0 6px 10px rgba(0,0,0,0.15); transform: translateY(-2px); }
+
+    #smart-grouper-sidebar {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 380px;
+      height: 100vh;
+      background: #f8f9fa;
+      box-shadow: -4px 0 16px rgba(0,0,0,0.1);
+      z-index: 999999;
+      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      font-family: Roboto, Arial, sans-serif;
+    }
+    #smart-grouper-sidebar.sg-open { right: 0; }
+
+    .sg-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .sg-header h2 { margin: 0; font-size: 18px; color: #202124; display: flex; align-items: center; gap: 8px;}
+    .sg-header .actions { display: flex; gap: 12px; }
+    .sg-header button { background: none; border: none; font-size: 18px; cursor: pointer; color: #5f6368; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;}
+    .sg-header button:hover { background: #f1f3f4; }
+
+    #sg-status { padding: 12px 20px; font-size: 13px; color: #1a73e8; font-weight: 500; background: #e8f0fe; display: none;}
+    #sg-status.visible { display: block; }
+
+    #sg-undo-container {
+      background: #323232; color: #fff; padding: 12px 20px; font-size: 14px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    #sg-undo-container.sg-hidden { display: none; }
+    #sg-undo-btn { background: none; color: #8ab4f8; border: none; cursor: pointer; font-weight: bold; padding: 4px 8px; border-radius: 4px;}
+    #sg-undo-btn:hover { background: rgba(138, 180, 248, 0.1); }
+
+    #sg-list { flex: 1; overflow-y: auto; padding: 16px; }
+
+    .sg-card {
+      background: #fff; border: 1px solid #dadce0; border-radius: 8px;
+      padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    .sg-card.removing { transform: translateX(100%); opacity: 0; }
+    .sg-card-header { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; align-items: center;}
+    .sg-card-header strong { color: #202124; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;}
+    .sg-badge { background: #e8f0fe; color: #1a73e8; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap;}
+    
+    .sg-suggestion { font-size: 13px; color: #5f6368; margin-bottom: 16px; background: #f1f3f4; padding: 12px; border-radius: 6px; border-left: 3px solid #1a73e8;}
+    .sg-suggestion-cat { font-weight: bold; color: #202124; display: block; margin-bottom: 4px;}
+    
+    .sg-actions { display: flex; gap: 8px; flex-wrap: wrap;}
+    .sg-actions button {
+      flex: 1; padding: 8px 0; border: 1px solid #dadce0; border-radius: 4px;
+      background: #fff; color: #1a73e8; cursor: pointer; font-size: 13px; font-weight: 500;
+      transition: background 0.2s;
+    }
+    .sg-actions button:hover { background: #f8f9fa; }
+    .sg-actions button.primary { background: #1a73e8; color: white; border: none;}
+    .sg-actions button.primary:hover { background: #1557b0; }
+    
+    /* 占位空状态 */
+    .sg-empty { text-align: center; padding: 40px 20px; color: #5f6368; }
+    .sg-empty svg { width: 64px; height: 64px; margin-bottom: 16px; fill: #dadce0;}
+  </style>
+</head>
+<body>
+
+  <!-- 模拟的 Gmail 背景 -->
+  <div class="mock-gmail-header">
+    <div class="logo">≡ &nbsp; <span style="color:#ea4335">M</span>ail Demo</div>
+  </div>
+  <div class="mock-gmail-layout">
+    <div class="mock-gmail-sidebar">
+      <div class="mock-gmail-sidebar-item active">Inbox (42)</div>
+      <div class="mock-gmail-sidebar-item">Starred</div>
+      <div class="mock-gmail-sidebar-item">Snoozed</div>
+      <div class="mock-gmail-sidebar-item">Sent</div>
+    </div>
+    <div class="mock-gmail-content">
+      <div style="padding: 16px; border-bottom: 1px solid #e0e0e0; display:flex; gap:16px; color:#5f6368">
+        <span>↻</span> <span>⋮</span>
+      </div>
+      <!-- 模拟邮件列表 -->
+      <div class="mock-email-row"><div class="mock-sender">Netflix</div><div class="mock-subject">New sign-in to your account <span class="mock-snippet">- We noticed a new sign-in...</span></div><div class="mock-date">10:42 AM</div></div>
+      <div class="mock-email-row"><div class="mock-sender">Best Buy</div><div class="mock-subject">Flash Sale: 50% Off Laptops <span class="mock-snippet">- Don't miss out on these deals...</span></div><div class="mock-date">Yesterday</div></div>
+      <div class="mock-email-row"><div class="mock-sender">GitHub</div><div class="mock-subject">[Smart-Grouper] Pull request #1 opened <span class="mock-snippet">- Please review the new UI changes...</span></div><div class="mock-date">Mar 2</div></div>
+      <div class="mock-email-row"><div class="mock-sender">Amazon</div><div class="mock-subject">Your order has shipped! <span class="mock-snippet">- Track your package here...</span></div><div class="mock-date">Mar 1</div></div>
+      <div class="mock-email-row"><div class="mock-sender">Best Buy</div><div class="mock-subject">Weekly Ad: TVs on sale <span class="mock-snippet">- Upgrade your living room...</span></div><div class="mock-date">Feb 28</div></div>
+    </div>
+  </div>
+
+  <!-- 扩展注入的 UI 元素 -->
+  <button id="sg-toggle-btn">⚡ Group Inbox</button>
+
+  <div id="smart-grouper-sidebar">
+    <div class="sg-header">
+      <h2>⚡ Smart Grouper</h2>
+      <div class="actions">
+        <button id="sg-refresh" title="Refresh">↻</button>
+        <button id="sg-close" title="Close">✕</button>
+      </div>
+    </div>
+    <div id="sg-status"></div>
+    <div id="sg-undo-container" class="sg-hidden">
+      <span id="sg-undo-text">Action applied.</span> 
+      <button id="sg-undo-btn">Undo</button>
+    </div>
+    <div id="sg-list">
+      <div class="sg-empty">
+        <svg focusable="false" viewBox="0 0 24 24"><path d="M19 3H4.99C3.88 3 3.01 3.89 3.01 5L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"></path></svg>
+        <h3>Inbox Analysis Ready</h3>
+        <p>Click refresh (↻) to analyze your senders using AI.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 模拟数据 (Mock API Response)
+    const mockData = [
+      {
+        id: 'group1',
+        name: "Best Buy", 
+        email: "promos@bestbuy.com", 
+        count: 14, 
+        unreadCount: 14,
+        suggestion: { category: "Ads", reason: "High frequency of promotional keywords like 'Sale', 'Off', and 'Deals'." }
+      },
+      {
+        id: 'group2',
+        name: "Netflix", 
+        email: "info@mailer.netflix.com", 
+        count: 5, 
+        unreadCount: 2,
+        suggestion: { category: "Subscriptions", reason: "Automated account alerts and content digests." }
+      },
+      {
+        id: 'group3',
+        name: "GitHub", 
+        email: "notifications@github.com", 
+        count: 23, 
+        unreadCount: 5,
+        suggestion: { category: "Important Updates", reason: "Development notifications and PR reviews." }
+      },
+      {
+        id: 'group4',
+        name: "Alice Smith", 
+        email: "alice.smith@example.com", 
+        count: 2, 
+        unreadCount: 1,
+        suggestion: { category: "Personal", reason: "Low volume, conversational subject lines." }
+      }
+    ];
+
+    let currentData = [...mockData];
+    let lastActionGroup = null;
+
+    // DOM Elements
+    const sidebar = document.getElementById('smart-grouper-sidebar');
+    const btnToggle = document.getElementById('sg-toggle-btn');
+    const btnClose = document.getElementById('sg-close');
+    const btnRefresh = document.getElementById('sg-refresh');
+    const listEl = document.getElementById('sg-list');
+    const statusEl = document.getElementById('sg-status');
+    const undoContainer = document.getElementById('sg-undo-container');
+    const undoBtn = document.getElementById('sg-undo-btn');
+    const undoText = document.getElementById('sg-undo-text');
+
+    // Toggle Sidebar
+    function toggleSidebar() {
+      sidebar.classList.toggle('sg-open');
+    }
+
+    btnToggle.addEventListener('click', toggleSidebar);
+    btnClose.addEventListener('click', toggleSidebar);
+
+    // Show Status Message
+    function showStatus(msg, timeout = 0) {
+      if (msg) {
+        statusEl.innerText = msg;
+        statusEl.classList.add('visible');
+        if (timeout > 0) {
+          setTimeout(() => statusEl.classList.remove('visible'), timeout);
+        }
+      } else {
+        statusEl.classList.remove('visible');
+      }
+    }
+
+    // Render List
+    function renderGroups() {
+      listEl.innerHTML = '';
+      if (currentData.length === 0) {
+        listEl.innerHTML = `<div class="sg-empty"><h3>All caught up!</h3><p>No more senders to group.</p></div>`;
+        return;
+      }
+
+      currentData.forEach(group => {
+        const card = document.createElement('div');
+        card.className = 'sg-card';
+        card.id = `card-${group.id}`;
+        card.innerHTML = `
+          <div class="sg-card-header">
+            <strong>${group.name}</strong>
+            <span class="sg-badge">${group.count} msgs (${group.unreadCount} unread)</span>
+          </div>
+          <div class="sg-suggestion">
+            <span class="sg-suggestion-cat">✨ AI Suggestion: ${group.suggestion.category}</span>
+            ${group.suggestion.reason}
+          </div>
+          <div class="sg-actions">
+            <button class="action-btn" data-action="archive" data-id="${group.id}">Archive All</button>
+            <button class="action-btn" data-action="markRead" data-id="${group.id}">Mark Read</button>
+            <button class="action-btn primary" data-action="label" data-id="${group.id}">Apply Label</button>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+
+      // Bind actions
+      document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', handleAction);
+      });
+    }
+
+    // Simulate API Fetch
+    btnRefresh.addEventListener('click', () => {
+      undoContainer.classList.add('sg-hidden');
+      listEl.innerHTML = '';
+      showStatus('Analyzing inbox with AI...');
+      currentData = [...mockData]; // reset data for demo
+      
+      setTimeout(() => {
+        showStatus('');
+        renderGroups();
+      }, 1200);
+    });
+
+    // Handle Actions (Archive/MarkRead/Label)
+    function handleAction(e) {
+      const action = e.target.getAttribute('data-action');
+      const groupId = e.target.getAttribute('data-id');
+      const groupIndex = currentData.findIndex(g => g.id === groupId);
+      if (groupIndex === -1) return;
+
+      const group = currentData[groupIndex];
+      const card = document.getElementById(`card-${groupId}`);
+      
+      // Animate removal
+      card.classList.add('removing');
+      
+      setTimeout(() => {
+        // Save state for undo
+        lastActionGroup = { group, index: groupIndex, action };
+        
+        // Remove from current data
+        currentData.splice(groupIndex, 1);
+        renderGroups();
+
+        // Show Undo
+        let actionStr = action === 'archive' ? 'Archived' : (action === 'markRead' ? 'Marked as read' : 'Labeled');
+        undoText.innerText = `${actionStr} ${group.count} messages from ${group.name}.`;
+        undoContainer.classList.remove('sg-hidden');
+        
+        // Auto hide undo after 10s in demo
+        setTimeout(() => {
+          undoContainer.classList.add('sg-hidden');
+        }, 10000);
+        
+      }, 200); // match css transition
+    }
+
+    // Undo Logic
+    undoBtn.addEventListener('click', () => {
+      if (!lastActionGroup) return;
+      undoContainer.classList.add('sg-hidden');
+      
+      // Restore data
+      currentData.splice(lastActionGroup.index, 0, lastActionGroup.group);
+      lastActionGroup = null;
+      
+      renderGroups();
+      showStatus('Action undone successfully.', 3000);
+    });
+
+  </script>
+</body>
+</html>
